@@ -1,130 +1,111 @@
 <p align="center">
-<img src="https://i.imgur.com/Ua7udoS.png" alt="Traffic Examination"/>
+<img src="https://i.imgur.com/pU5A58S.png" alt="Microsoft Active Directory Logo"/>
 </p>
 
-<h1>Network Security Groups (NSGs) and Inspecting Traffic Between Azure Virtual Machines</h1>
-In this tutorial, we observe various network traffic to and from Azure Virtual Machines with Wireshark as well as experiment with Network Security Groups. <br />
-
-
+<h1>Group Policy Management and Inspecting Event Viewer logs (Azure)</h1>
+This tutorial outlines the how to do group policy management in Active Directory and briefly touching on Event Viewer within Azure Virtual Machines.<br />
 
 
 <h2>Environments and Technologies Used</h2>
 
 - Microsoft Azure (Virtual Machines/Compute)
 - Remote Desktop
-- Various Command-Line Tools
-- Various Network Protocols (SSH, RDH, DNS, HTTP/S, ICMP)
-- Wireshark (Protocol Analyzer)
+- Active Directory Domain Services
+- Event Viewer
 
 <h2>Operating Systems Used </h2>
 
-- Windows 10 (21H2)
-- Ubuntu Server 20.04
+- Windows Server 2022, at least 2vCPUs, 8GB RAM
+- Windows 10 Pro (21H2), at least 2vCPUs, 8GB RAM
 
-<h2>High-Level Steps</h2>
+<h2>High-Level Deployment and Configuration Steps</h2>
 
-- Observe ICMP Traffic
-- Observe SSH Traffic
-- Observe DHCP Traffic
-- Observe DNS Traffic
-- Observe RDP Traffic
+- Create some users within the domain
+- Configure group policy account lockout settings
+- Enabling and disabling accounts
+- Observing logs
 
-
-<h2>Actions and Observations</h2>
-
-
- 1.) The first thing we are going to do is create a resource group so we can put both of our virtual machines in. Once we have our resource group made we then want to make our first virtual machine. The first virtual machine we are going to make is a Windows 10 vm. Select the resource you made, and then name the virtual machine VM1. Make sure you select Windows 10 Pro, version 22H as the operating system. As for the size of the machine we are going to want atleast 2 vcpus, and 16 gb of memory. Create a username and password of your choosing, and keep the inbound port rules as the default options.
+<h2>Deployment and Configuration Steps</h2>
 
 <p>
-<img src="https://imgur.com/WgPD275.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+We can start off by creating some users within DC-1. Go to Active Directory Users and Computers or search dsa.msc in the search bar, right-click on the _EMPLOYEES OU -> New -> Users. Then you can proceed to fill in
+  any username and password. Once you get a few users we can begin to configure the group policy. 
+
+Search gpmc.msc for Group policy management console in the search bar. 
 </p>
-<p>
-  
+<br />
 
 <p>
-<img src="https://imgur.com/X6ZMTJG.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<img src="https://github.com/user-attachments/assets/6bdfa1f6-b9a4-498c-b968-1a05a5d77bc5" height="80%" width="80%" alt="gpmc"/>
+  <img src="https://github.com/user-attachments/assets/929bf199-4d39-4ebb-b2ff-1e7acd2910a3" height="80%" width="80%" alt="gpmc landing page"/>
 </p>
 <p>
-  
-2.) After this step we are going to click on next until we get to the networking page and it should automatically create a virtual network and subnet for us. 
-  
+We can either edit an existing group policy object (GPO) or create a new one. In this case, we'll edit the existing Default Domain Policy. Click on this then go to Computer Configuration -> Policies -> Windows
+  Settings -> Security Settings -> Account Policies -> Account Lockout Policy.
+</p>
+<br />
 
 <p>
-<img src="https://imgur.com/XzdSPoR.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+<img src="https://github.com/user-attachments/assets/ffa19f3f-7511-4e0b-8eef-0d1d152b6652" height="80%" width="80%" alt="account lockout policies"/>
 </p>
 <p>
+Some defintions:
+<p><b>Account lockout duration</b>: how long an account will be locked out for</p>
+<p><b>Account lockout threshold</b>: how many times incorrect credentials can be entered in before being locked out</p>
+<p><b>Allow administrator account lockout</b>: can apply lockout policy to the built-in administrator of the domain</p>
+<p><b>Reset account lockout counter after</b>: how long it takes for the threshold counter to reset after an incorrect input</p>
+<p>In this case we can set the lockout duration to 30min, threshold to 5 attempts, leave the administrator account lockout as not defined and the reset duration to 10min. 
+<p>Before we try to lock ourselves out of an account, we need to update the group policy in Client-1 or the client machine. We can do this by logging as an admin user into Client-1, going to the command line or
+Powershell as an administrator and running the command gpupdate /force.</p>
+
+<img src="https://github.com/user-attachments/assets/375c8ce7-40b8-4c39-9ae0-9f2f9caedb37" height="80%" width="80%" alt="gpudpate force"/>
+
+ <p> This will now update the group policy to include our changes to the account lockout policies. Now let's see what happens when we try to login incorrectly too many times. Pick any random user that was 
+   created before and log into Client-1. If you tried to enter incorrect credentials more than 5 times, this should appear.</p>
+</p>
+<br />
+
+<p>
+  <img src="https://github.com/user-attachments/assets/2a82e323-69d5-45ca-b389-c93936e1a4a6" height="80%" width="80%" alt="account lockout banner"/>
+</p>
+<p>
+We can try and unlock this account as an admin. Go back to DC-1 as an admin user and go Active Directory Users and Computers. It may be hard to find exactly which user was locked out, so an easy way to find them is
+  by right-clicking on mydomain.com -> Find...
+</p>
+<br />
+<p>
+  <img src="https://github.com/user-attachments/assets/395190cc-0168-4744-b1af-a6a2dca191f5" height="80%" width="80%" alt="find locked out user"/>
+</p>
+<p>
+Now once we access their account, you check the unlock account box and hit OK. This will unlock the user's account and allow them to sign in again. We can also reset a user's account from the find menu as well.
+  Simply right-click on the user's name and click on Reset password. This will also us to unlock the account at the same time if we haven't done so already.
+</p>
+<br />
+<p>
+  <img src="https://github.com/user-attachments/assets/57f2848d-c80d-421b-9302-39126d83d7f0" height="50%" width="50%" alt="unlock account"/>
+  <img src="https://github.com/user-attachments/assets/6ce6b46a-6923-47b6-8d63-35fd80f65d06" height="50%" width="50%" alt="reset password"/>
+
+</p>
+<p>
+In the same drop down for resetting a password is an option to disable an account. We can simply click on this to disable a user's account and re-enable it via the same dropdown menu. The black down arrow in the
+  icon shows that the account has been disabled. There's normally a good reason for accounts being disabled such as an employee leaving the company or a compromised account. 
+</p>
+<br />
+
+<p>
+  <img src="https://github.com/user-attachments/assets/f21cd9f9-94a2-4d0a-9321-d7ca629693d1" height="80%" width="80%" alt="disabled account"/>
+</p>
+<p>
+Finally, we have a look at Event Viewer. Certain logs, like Security logs, may only be accessed by admins so we'll need to login Client-1 as an admin. Search eventvwr.msc in the search bar and enter to access
+  Event Viewer. This program holds all of the logs within the Windows operating system. Click on Windows logs in the left pane, then Security. We can then click Filter current log on the right pane then type in 
+  4624,4625 in the Event ID. Event IDs are numbers assigned to certain types of events within the system. 4624 is for a successful logon and 4625  is for a failed logon. Doing that we should get this.
   
-  Click review and create our VM.
-  
-  Now that we have created our first VM we are going to go ahead and create our second VM, but this time it will be a Ubuntu Server 20.04 LTS machine. It will be the same process as creating our first machine but instead we are going to switch the SSH public key to password instead. 
-  
+</p>
+<br />
 <p>
-<img src="https://imgur.com/0KT3Fmb.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+  <img src="https://github.com/user-attachments/assets/4530b589-126c-4c4a-af82-6fb925199f38" height="80%" width="80%" alt="filter current log"/>
+  <img src="https://github.com/user-attachments/assets/c29ac1ac-86ee-425c-b89e-e57088b6dd88" height="80%" width="80%" alt="observing logs in event viewer"/>
 </p>
 <p>
-  
-<p>
-<img src="https://imgur.com/pyxsHfF.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
+We can see our 5 failed logon attempts in a row. Afterwards, we can unlock the account and then logon again as a regular user.
 </p>
-<p>
-  
-  Click next until we get to the networking page again.
-  
-  The networking should automatically give us the virtual network from VM1 as well as the subnet. 
-  
-<p>
-<img src="https://imgur.com/3fQXRcw.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
-</p>
-<p>
- 
- Click review and create, and it will create our second VM.
- 
- 2.) Now that we have both virtual machines up and running we are going to connect to our Windows 10 vm using the remote desktop connection app. Once we are connected we are going to go to our browser and download and install Wireshark.
- 
- "Wireshark is a free and open-source packet analyzer. It is used for network troubleshooting, analysis, software and communications protocol development, and education." 
- 
- 3.) Open wireshark and filter for ICMP traffic only.
- 
- <p>
-<img src="https://imgur.com/RrtChUe.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
-</p>
-<p>
- 
- 4.) We are going to want to retrieve the private IP address of our Ubuntu VM and then attempt to ping it from within our Windows 10 VM using wireshark. To ping the private IP address of the Ubuntu machine open CMD or Powershell on the Windows machine and type: ping 10.0.0.5 or whatever the private IP address is for your Ubuntu machine.
- 
-<p>
-<img src="https://imgur.com/zmJzyne.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
-</p>
-<p>
- 
-<p>
-<img src="https://imgur.com/pp4eZdK.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
-</p>
-<p>
- 
- In either CMD or Powershell ping www.google.com and observe the traffic in wireshark.
- 
-5.) We then are going to initiate a non-stop ping from our Windows 10 VM to our Ubuntu VM.
- 
-6.) Open the Network Security Group of our Ubuntu machine and disable incoming (inbound) ICMP traffic. To disable incoming ICMP traffic click "Add" new rule and copy everything exactly from the picture. Once that is done you can create the rule and it will create automatically and show up as a new rule.
- 
- <p>
-<img src="https://imgur.com/r3dH3Yy.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
-</p>
-<p>
- 
-<p>
-<img src="https://imgur.com/qiSIrsX.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
-</p>
-<p>
- 
- Now that we have disabled incoming ICMP traffic from VM2 if we go back to VM1 you can see the ping request is timing out. 
- 
- 7.) Re-enable ICMP traffic for the Network Security Group your Ubuntu VM is using
-Back in the Windows 10 VM, observe the ICMP traffic in WireShark and the command line Ping activity (should start working)
-Stop the ping activity
- 
- 8.) The next thing we are going to do is Observe SSH Traffic.
- 
- 
- 
